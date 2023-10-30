@@ -430,6 +430,26 @@ def _collect_target_attribute(
     return None
 
 class OpenTelemetryMiddleware:
+
+    """The ASGI application middleware.
+    This class is an ASGI middleware that starts and annotates spans for any
+    requests it is invoked with.
+    Args:
+        app: The ASGI application callable to forward requests to.
+        default_span_details: Callback which should return a string and a tuple, representing the desired default span name and a
+                      dictionary with any additional span attributes to set.
+                      Optional: Defaults to get_default_span_details.
+        server_request_hook: Optional callback which is called with the server span and ASGI
+                      scope object for every incoming request.
+        client_request_hook: Optional callback which is called with the internal span and an ASGI
+                      scope which is sent as a dictionary for when the method receive is called.
+        client_response_hook: Optional callback which is called with the internal span and an ASGI
+                      event which is sent as a dictionary for when the method send is called.
+        tracer_provider: The optional tracer provider to use. If omitted
+            the current globally configured one is used.
+    """
+
+    # pylint: disable=too-many-branches
     def __init__(
         self,
         app,
