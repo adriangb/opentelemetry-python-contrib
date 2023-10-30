@@ -333,10 +333,12 @@ def collect_request_attributes(scope):
 
 
 def collect_custom_headers_attributes(scope_or_response_message: dict[str, Any], sanitize: SanitizeValue, header_regexes: list[str]) -> dict[str, str]:
-    """returns custom HTTP request or response headers to be added into SERVER span as span attributes
+    """
+    Returns custom HTTP request or response headers to be added into SERVER span as span attributes.
+
     Refer specifications:
-        - https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
-        - https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
+     - https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
+     - https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
     """
     # Decode headers before processing.
     headers: dict[str, str] = {
