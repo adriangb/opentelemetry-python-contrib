@@ -429,10 +429,13 @@ def _collect_target_attribute(
 
     return None
 
+
 class OpenTelemetryMiddleware:
     """The ASGI application middleware.
+
     This class is an ASGI middleware that starts and annotates spans for any
     requests it is invoked with.
+
     Args:
         app: The ASGI application callable to forward requests to.
         default_span_details: Callback which should return a string and a tuple, representing the desired default span name and a
