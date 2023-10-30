@@ -16,7 +16,7 @@ from os import environ
 from re import IGNORECASE as RE_IGNORECASE
 from re import compile as re_compile
 from re import search
-from typing import Iterable, List, Optional
+from typing import Callable, Iterable, List, Optional
 from urllib.parse import urlparse, urlunparse
 
 from opentelemetry.semconv.trace import SpanAttributes
@@ -84,9 +84,9 @@ class SanitizeValue:
         )
 
     def sanitize_header_values(
-        self, headers: dict, header_regexes: list, normalize_function: callable
-    ) -> dict:
-        values = {}
+        self, headers: dict[str, str], header_regexes: list[str], normalize_function: Callable[[str], str]
+    ) -> dict[str, str]:
+        values: dict[str, str] = {}
 
         if header_regexes:
             header_regexes_compiled = re_compile(
@@ -201,13 +201,14 @@ def sanitize_method(method: Optional[str]) -> Optional[str]:
     return "UNKNOWN"
 
 def get_custom_headers(env_var: str) -> List[str]:
-    custom_headers = environ.get(env_var, [])
+    custom_headers: str = environ.get(env_var, '')
     if custom_headers:
-        custom_headers = [
+        return [
             custom_headers.strip()
             for custom_headers in custom_headers.split(",")
         ]
-    return custom_headers
+    else:
+        return []
 
 
 def _parse_active_request_count_attrs(req_attrs):

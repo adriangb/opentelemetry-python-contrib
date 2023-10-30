@@ -91,7 +91,7 @@ else:
 try:
     from opentelemetry.instrumentation.asgi import asgi_getter, asgi_setter
     from opentelemetry.instrumentation.asgi import (
-        collect_custom_request_headers_attributes as asgi_collect_custom_request_attributes,
+        collect_custom_headers_attributes as asgi_collect_custom_request_attributes,
     )
     from opentelemetry.instrumentation.asgi import (
         collect_custom_response_headers_attributes as asgi_collect_custom_response_attributes,

@@ -193,7 +193,7 @@ import typing
 import urllib
 from functools import wraps
 from timeit import default_timer
-from typing import Tuple
+from typing import Any, Awaitable, Callable, Tuple
 
 from asgiref.compatibility import guarantee_single_callable
 
@@ -332,55 +332,21 @@ def collect_request_attributes(scope):
     return result
 
 
-def collect_custom_request_headers_attributes(scope):
-    """returns custom HTTP request headers to be added into SERVER span as span attributes
-    Refer specification https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
+def collect_custom_headers_attributes(scope_or_response_message: dict[str, Any], sanitize: SanitizeValue, header_regexes: list[str]) -> dict[str, str]:
+    """returns custom HTTP request or response headers to be added into SERVER span as span attributes
+    Refer specifications:
+        - https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
+        - https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
     """
-
-    sanitize = SanitizeValue(
-        get_custom_headers(
-            OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS
-        )
-    )
-
     # Decode headers before processing.
-    headers = {
+    headers: dict[str, str] = {
         _key.decode("utf8"): _value.decode("utf8")
-        for (_key, _value) in scope.get("headers")
+        for (_key, _value) in scope_or_response_message.get("headers") or {}
     }
-
     return sanitize.sanitize_header_values(
         headers,
-        get_custom_headers(
-            OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST
-        ),
+        header_regexes,
         normalise_request_header_name,
-    )
-
-
-def collect_custom_response_headers_attributes(message):
-    """returns custom HTTP response headers to be added into SERVER span as span attributes
-    Refer specification https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/http.md#http-request-and-response-headers
-    """
-
-    sanitize = SanitizeValue(
-        get_custom_headers(
-            OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS
-        )
-    )
-
-    # Decode headers before processing.
-    headers = {
-        _key.decode("utf8"): _value.decode("utf8")
-        for (_key, _value) in message.get("headers")
-    }
-
-    return sanitize.sanitize_header_values(
-        headers,
-        get_custom_headers(
-            OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE
-        ),
-        normalise_response_header_name,
     )
 
 
@@ -459,29 +425,7 @@ def _collect_target_attribute(
 
     return None
 
-
 class OpenTelemetryMiddleware:
-    """The ASGI application middleware.
-
-    This class is an ASGI middleware that starts and annotates spans for any
-    requests it is invoked with.
-
-    Args:
-        app: The ASGI application callable to forward requests to.
-        default_span_details: Callback which should return a string and a tuple, representing the desired default span name and a
-                      dictionary with any additional span attributes to set.
-                      Optional: Defaults to get_default_span_details.
-        server_request_hook: Optional callback which is called with the server span and ASGI
-                      scope object for every incoming request.
-        client_request_hook: Optional callback which is called with the internal span and an ASGI
-                      scope which is sent as a dictionary for when the method receive is called.
-        client_response_hook: Optional callback which is called with the internal span and an ASGI
-                      event which is sent as a dictionary for when the method send is called.
-        tracer_provider: The optional tracer provider to use. If omitted
-            the current globally configured one is used.
-    """
-
-    # pylint: disable=too-many-branches
     def __init__(
         self,
         app,
@@ -493,6 +437,9 @@ class OpenTelemetryMiddleware:
         tracer_provider=None,
         meter_provider=None,
         meter=None,
+        http_capture_headers_server_request : list[str] | None = None,
+        http_capture_headers_server_response: list[str] | None = None,
+        http_capture_headers_sanitize_fields: list[str] | None = None
     ):
         self.app = guarantee_single_callable(app)
         self.tracer = trace.get_tracer(__name__, __version__, tracer_provider)
@@ -530,7 +477,20 @@ class OpenTelemetryMiddleware:
         self.client_response_hook = client_response_hook
         self.content_length_header = None
 
-    async def __call__(self, scope, receive, send):
+        # Environment variables as constructor parameters
+        self.http_capture_headers_server_request = http_capture_headers_server_request or (
+            get_custom_headers(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST)
+        ) or None
+        self.http_capture_headers_server_response = http_capture_headers_server_response or (
+            get_custom_headers(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE)
+        ) or None
+        self.http_capture_headers_sanitize_fields = SanitizeValue(
+            http_capture_headers_sanitize_fields or (
+                get_custom_headers(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS)
+            ) or []
+        )
+
+    async def __call__(self, scope: dict[str, Any], receive: Callable[[], Awaitable[dict[str, Any]]], send: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
         """The ASGI application
 
         Args:
@@ -573,7 +533,13 @@ class OpenTelemetryMiddleware:
 
                     if current_span.kind == trace.SpanKind.SERVER:
                         custom_attributes = (
-                            collect_custom_request_headers_attributes(scope)
+                            collect_custom_headers_attributes(
+                                scope,
+                                self.http_capture_headers_sanitize_fields,
+                                self.http_capture_headers_server_request,
+                            )
+                            if self.http_capture_headers_server_request
+                            else {}
                         )
                         if len(custom_attributes) > 0:
                             current_span.set_attributes(custom_attributes)
@@ -644,7 +610,7 @@ class OpenTelemetryMiddleware:
         self, server_span, server_span_name, scope, send, duration_attrs
     ):
         @wraps(send)
-        async def otel_send(message):
+        async def otel_send(message: dict[str, Any]) -> None:
             with self.tracer.start_as_current_span(
                 " ".join((server_span_name, scope["type"], "send"))
             ) as send_span:
@@ -668,7 +634,13 @@ class OpenTelemetryMiddleware:
                         and "headers" in message
                     ):
                         custom_response_attributes = (
-                            collect_custom_response_headers_attributes(message)
+                            collect_custom_headers_attributes(
+                                message,
+                                self.http_capture_headers_sanitize_fields,
+                                self.http_capture_headers_server_response,
+                            )
+                            if self.http_capture_headers_server_response
+                            else {}
                         )
                         if len(custom_response_attributes) > 0:
                             server_span.set_attributes(
