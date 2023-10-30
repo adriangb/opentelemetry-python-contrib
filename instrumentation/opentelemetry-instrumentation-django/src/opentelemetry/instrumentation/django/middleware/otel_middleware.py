@@ -96,10 +96,7 @@ else:
 try:
     from opentelemetry.instrumentation.asgi import asgi_getter, asgi_setter
     from opentelemetry.instrumentation.asgi import (
-        collect_custom_headers_attributes as asgi_collect_custom_request_attributes,
-    )
-    from opentelemetry.instrumentation.asgi import (
-        collect_custom_response_headers_attributes as asgi_collect_custom_response_attributes,
+        collect_custom_headers_attributes as asgi_collect_custom_headers_attributes,
     )
     from opentelemetry.instrumentation.asgi import (
         collect_request_attributes as asgi_collect_request_attributes,
@@ -254,15 +251,15 @@ class _DjangoMiddleware(MiddlewareMixin):
                 )
                 if span.is_recording() and span.kind == SpanKind.SERVER:
                     attributes.update(
-                        asgi_collect_custom_request_attributes(
+                        asgi_collect_custom_headers_attributes(
                             carrier,
-                            get_custom_headers(
-                                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST
-                            ),
                             SanitizeValue(
                                 get_custom_headers(
                                     OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS
                                 )
+                            ),
+                            get_custom_headers(
+                                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST
                             ),
                             normalise_request_header_name,
                         )
@@ -353,7 +350,18 @@ class _DjangoMiddleware(MiddlewareMixin):
                         asgi_setter.set(custom_headers, key, value)
 
                     custom_res_attributes = (
-                        asgi_collect_custom_response_attributes(custom_headers)
+                        asgi_collect_custom_headers_attributes(
+                            custom_headers,
+                            SanitizeValue(
+                                get_custom_headers(
+                                    OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS
+                                )
+                            ),
+                            get_custom_headers(
+                                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST
+                            ),
+                            normalise_request_header_name,
+                        )
                     )
                     for key, value in custom_res_attributes.items():
                         span.set_attribute(key, value)
