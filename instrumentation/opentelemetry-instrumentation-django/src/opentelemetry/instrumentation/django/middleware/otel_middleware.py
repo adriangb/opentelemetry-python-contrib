@@ -352,7 +352,7 @@ class _DjangoMiddleware(MiddlewareMixin):
 
                     custom_res_attributes = (
                         asgi_collect_custom_headers_attributes(
-                            {'headers': custom_headers},
+                            custom_headers,
                             SanitizeValue(
                                 get_custom_headers(
                                     OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS
