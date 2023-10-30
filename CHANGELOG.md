@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `opentelemetry-instrumentation-system-metrics` Add support for collecting process metrics
   ([#1948](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/1948))
+- Add support for configuring ASGI middleware header extraction via runtime constructor parameters
+  ([#2026](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/2026))
 
 ### Fixed
 
