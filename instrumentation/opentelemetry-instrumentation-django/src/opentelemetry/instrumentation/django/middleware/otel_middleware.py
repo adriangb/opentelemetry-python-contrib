@@ -43,10 +43,15 @@ from opentelemetry.instrumentation.wsgi import wsgi_getter
 from opentelemetry.semconv.trace import SpanAttributes
 from opentelemetry.trace import Span, SpanKind, use_span
 from opentelemetry.util.http import (
+    OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS,
+    OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST,
+    SanitizeValue,
     _parse_active_request_count_attrs,
     _parse_duration_attrs,
+    get_custom_headers,
     get_excluded_urls,
     get_traced_request_attrs,
+    normalise_request_header_name,
 )
 
 try:
@@ -249,7 +254,18 @@ class _DjangoMiddleware(MiddlewareMixin):
                 )
                 if span.is_recording() and span.kind == SpanKind.SERVER:
                     attributes.update(
-                        asgi_collect_custom_request_attributes(carrier)
+                        asgi_collect_custom_request_attributes(
+                            carrier,
+                            get_custom_headers(
+                                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST
+                            ),
+                            SanitizeValue(
+                                get_custom_headers(
+                                    OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS
+                                )
+                            ),
+                            normalise_request_header_name,
+                        )
                     )
             else:
                 if span.is_recording() and span.kind == SpanKind.SERVER:
