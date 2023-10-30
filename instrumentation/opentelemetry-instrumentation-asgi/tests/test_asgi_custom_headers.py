@@ -1,3 +1,4 @@
+import os
 from unittest import mock
 
 import opentelemetry.instrumentation.asgi as otel_asgi
@@ -80,14 +81,16 @@ async def websocket_app_with_custom_headers(scope, receive, send):
         OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE: "Custom-Test-Header-1,Custom-Test-Header-2,Custom-Test-Header-3,my-custom-regex-header-.*,invalid-regex-header-.*,.*my-secret.*",
     },
 )
+
 class TestCustomHeaders(AsgiTestBase, TestBase):
     def setUp(self):
         super().setUp()
         self.tracer_provider, self.exporter = TestBase.create_tracer_provider()
         self.tracer = self.tracer_provider.get_tracer(__name__)
         self.app = otel_asgi.OpenTelemetryMiddleware(
-            simple_asgi, tracer_provider=self.tracer_provider
+            simple_asgi, tracer_provider=self.tracer_provider, **self.constructor_params,
         )
+        self.constructor_params = {}
 
     def test_http_custom_request_headers_in_span_attributes(self):
         self.scope["headers"].extend(
@@ -148,7 +151,7 @@ class TestCustomHeaders(AsgiTestBase, TestBase):
 
     def test_http_custom_response_headers_in_span_attributes(self):
         self.app = otel_asgi.OpenTelemetryMiddleware(
-            http_app_with_custom_headers, tracer_provider=self.tracer_provider
+            http_app_with_custom_headers, tracer_provider=self.tracer_provider, **self.constructor_params,
         )
         self.seed_app(self.app)
         self.send_default_request()
@@ -175,7 +178,7 @@ class TestCustomHeaders(AsgiTestBase, TestBase):
 
     def test_http_custom_response_headers_not_in_span_attributes(self):
         self.app = otel_asgi.OpenTelemetryMiddleware(
-            http_app_with_custom_headers, tracer_provider=self.tracer_provider
+            http_app_with_custom_headers, tracer_provider=self.tracer_provider, **self.constructor_params,
         )
         self.seed_app(self.app)
         self.send_default_request()
@@ -277,6 +280,7 @@ class TestCustomHeaders(AsgiTestBase, TestBase):
         self.app = otel_asgi.OpenTelemetryMiddleware(
             websocket_app_with_custom_headers,
             tracer_provider=self.tracer_provider,
+            **self.constructor_params,
         )
         self.seed_app(self.app)
         self.send_input({"type": "websocket.connect"})
@@ -317,6 +321,7 @@ class TestCustomHeaders(AsgiTestBase, TestBase):
         self.app = otel_asgi.OpenTelemetryMiddleware(
             websocket_app_with_custom_headers,
             tracer_provider=self.tracer_provider,
+            **self.constructor_params,
         )
         self.seed_app(self.app)
         self.send_input({"type": "websocket.connect"})
@@ -333,3 +338,36 @@ class TestCustomHeaders(AsgiTestBase, TestBase):
             if span.kind == SpanKind.SERVER:
                 for key, _ in not_expected.items():
                     self.assertNotIn(key, span.attributes)
+
+
+
+SANITIZE_FIELDS_TEST_VALUE = ".*my-secret.*"
+SERVER_REQUEST_TEST_VALUE = "Custom-Test-Header-1,Custom-Test-Header-2,Custom-Test-Header-3,Regex-Test-Header-.*,Regex-Invalid-Test-Header-.*,.*my-secret.*"
+SERVER_RESPONSE_TEST_VALUE = "Custom-Test-Header-1,Custom-Test-Header-2,Custom-Test-Header-3,my-custom-regex-header-.*,invalid-regex-header-.*,.*my-secret.*"
+
+class TestCustomHeadersEnv(TestCustomHeaders):
+    def setUp(self):
+        super().setUp()
+        os.environ.update(
+            {
+                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS: SANITIZE_FIELDS_TEST_VALUE,
+                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST: SERVER_REQUEST_TEST_VALUE,
+                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE: SERVER_RESPONSE_TEST_VALUE,
+            }
+        )
+    
+    def tearDown(self):
+        os.environ.pop(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS, None)
+        os.environ.pop(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST, None)
+        os.environ.pop(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE, None)
+        super().tearDown()
+
+
+class TestCustomHeadersConstructor(TestCustomHeaders):
+    def setUp(self):
+        super().setUp()
+        self.constructor_params = {
+            "http_capture_headers_sanitize_fields": SANITIZE_FIELDS_TEST_VALUE,
+            "http_capture_headers_server_request": SERVER_REQUEST_TEST_VALUE,
+            "http_capture_headers_server_response": SERVER_RESPONSE_TEST_VALUE,
+        }

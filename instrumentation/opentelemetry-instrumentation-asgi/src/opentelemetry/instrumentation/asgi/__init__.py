@@ -189,6 +189,8 @@ API
 ---
 """
 
+from __future__ import annotations
+
 import typing
 import urllib
 from functools import wraps
@@ -332,7 +334,7 @@ def collect_request_attributes(scope):
     return result
 
 
-def collect_custom_headers_attributes(scope_or_response_message: dict[str, Any], sanitize: SanitizeValue, header_regexes: list[str]) -> dict[str, str]:
+def collect_custom_headers_attributes(scope_or_response_message: dict[str, Any], sanitize: SanitizeValue, header_regexes: list[str], normalize_names: Callable[[str], str]) -> dict[str, str]:
     """
     Returns custom HTTP request or response headers to be added into SERVER span as span attributes.
 
@@ -348,7 +350,7 @@ def collect_custom_headers_attributes(scope_or_response_message: dict[str, Any],
     return sanitize.sanitize_header_values(
         headers,
         header_regexes,
-        normalise_request_header_name,
+        normalize_names,
     )
 
 
@@ -539,6 +541,7 @@ class OpenTelemetryMiddleware:
                                 scope,
                                 self.http_capture_headers_sanitize_fields,
                                 self.http_capture_headers_server_request,
+                                normalise_request_header_name,
                             )
                             if self.http_capture_headers_server_request
                             else {}
@@ -640,6 +643,7 @@ class OpenTelemetryMiddleware:
                                 message,
                                 self.http_capture_headers_sanitize_fields,
                                 self.http_capture_headers_server_response,
+                                normalise_response_header_name,
                             )
                             if self.http_capture_headers_server_response
                             else {}
