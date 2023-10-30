@@ -537,7 +537,8 @@ class TestMiddlewareAsgiWithCustomHeaders(SimpleTestCase, TestBase):
             ),
             "http.response.header.my_secret_header": ("[REDACTED]",),
         }
-        await self.async_client.get("/traced_custom_header/")
+        resp = await self.async_client.get("/traced_custom_header/")
+        assert resp.status_code == 200
         spans = self.exporter.get_finished_spans()
         self.assertEqual(len(spans), 1)
 

@@ -352,7 +352,7 @@ class TestCustomHeadersEnv(TestCustomHeaders):
             }
         )
         super().setUp()
-    
+
     def tearDown(self):
         os.environ.pop(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS, None)
         os.environ.pop(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST, None)

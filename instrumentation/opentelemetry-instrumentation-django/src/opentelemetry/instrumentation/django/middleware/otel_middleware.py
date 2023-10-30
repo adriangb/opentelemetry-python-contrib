@@ -45,6 +45,7 @@ from opentelemetry.trace import Span, SpanKind, use_span
 from opentelemetry.util.http import (
     OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS,
     OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST,
+    OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE,
     SanitizeValue,
     _parse_active_request_count_attrs,
     _parse_duration_attrs,
@@ -351,14 +352,14 @@ class _DjangoMiddleware(MiddlewareMixin):
 
                     custom_res_attributes = (
                         asgi_collect_custom_headers_attributes(
-                            custom_headers,
+                            {'headers': custom_headers},
                             SanitizeValue(
                                 get_custom_headers(
                                     OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS
                                 )
                             ),
                             get_custom_headers(
-                                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST
+                                OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE
                             ),
                             normalise_request_header_name,
                         )
