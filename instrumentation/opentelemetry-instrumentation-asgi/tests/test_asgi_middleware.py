@@ -123,9 +123,6 @@ async def error_asgi(scope, receive, send):
 
 
 class TestAsgiApplication(AsgiTestBase):
-    def setUp(self) -> None:
-        self.constructor_params = {}
-
     def validate_outputs(self, outputs, error=None, modifiers=None):
         # Ensure modifiers is a list
         modifiers = modifiers or []
@@ -204,7 +201,7 @@ class TestAsgiApplication(AsgiTestBase):
 
     def test_basic_asgi_call(self):
         """Test that spans are emitted as expected."""
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
         outputs = self.get_all_output()
@@ -219,7 +216,7 @@ class TestAsgiApplication(AsgiTestBase):
         mock_tracer.start_as_current_span.return_value.__exit__ = mock_span
         with mock.patch("opentelemetry.trace.get_tracer") as tracer:
             tracer.return_value = mock_tracer
-            app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+            app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
             self.seed_app(app)
             self.send_default_request()
             self.assertFalse(mock_span.is_recording())
@@ -229,7 +226,7 @@ class TestAsgiApplication(AsgiTestBase):
 
     def test_asgi_exc_info(self):
         """Test that exception information is emitted as expected."""
-        app = otel_asgi.OpenTelemetryMiddleware(error_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(error_asgi)
         self.seed_app(app)
         self.send_default_request()
         outputs = self.get_all_output()
@@ -304,7 +301,7 @@ class TestAsgiApplication(AsgiTestBase):
             return expected
 
         self.scope["server"] = None
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
         outputs = self.get_all_output()
@@ -321,7 +318,7 @@ class TestAsgiApplication(AsgiTestBase):
             return expected
 
         self.scope["headers"].append([b"host", hostname])
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
         outputs = self.get_all_output()
@@ -338,7 +335,7 @@ class TestAsgiApplication(AsgiTestBase):
             return expected
 
         self.scope["headers"].append([b"user-agent", user_agent])
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
         outputs = self.get_all_output()
@@ -350,7 +347,7 @@ class TestAsgiApplication(AsgiTestBase):
         orig = get_global_response_propagator()
         set_global_response_propagator(TraceResponsePropagator())
 
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
 
@@ -388,7 +385,7 @@ class TestAsgiApplication(AsgiTestBase):
             "client": ("127.0.0.1", 32767),
             "server": ("127.0.0.1", 80),
         }
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_input({"type": "websocket.connect"})
         self.send_input({"type": "websocket.receive", "text": "ping"})
@@ -465,7 +462,7 @@ class TestAsgiApplication(AsgiTestBase):
             "client": ("127.0.0.1", 32767),
             "server": ("127.0.0.1", 80),
         }
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_input({"type": "websocket.connect"})
         self.send_input({"type": "websocket.receive", "text": "ping"})
@@ -491,7 +488,7 @@ class TestAsgiApplication(AsgiTestBase):
 
     def test_lifespan(self):
         self.scope["type"] = "lifespan"
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
         span_list = self.memory_exporter.get_finished_spans()
@@ -531,7 +528,7 @@ class TestAsgiApplication(AsgiTestBase):
         )
 
     def test_asgi_metrics(self):
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
         self.seed_app(app)
@@ -563,7 +560,7 @@ class TestAsgiApplication(AsgiTestBase):
         self.assertTrue(number_data_point_seen and histogram_data_point_seen)
 
     def test_basic_metric_success(self):
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         start = default_timer()
         self.send_default_request()
@@ -623,7 +620,7 @@ class TestAsgiApplication(AsgiTestBase):
             else:
                 raise ValueError("websockets not supported")
 
-        app = otel_asgi.OpenTelemetryMiddleware(target_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(target_asgi)
         self.seed_app(app)
         self.send_default_request()
         metrics_list = self.memory_metrics_reader.get_metrics_data()
@@ -653,7 +650,7 @@ class TestAsgiApplication(AsgiTestBase):
             "client": ("127.0.0.1", 32767),
             "server": ("127.0.0.1", 80),
         }
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_input({"type": "websocket.connect"})
         self.send_input({"type": "websocket.receive", "text": "ping"})
@@ -805,7 +802,7 @@ class TestAsgiApplicationRaisingError(AsgiTestBase):
         pass
 
     @mock.patch(
-        "opentelemetry.instrumentation.asgi.collect_custom_request_headers_attributes",
+        "opentelemetry.instrumentation.asgi.collect_custom_headers_attributes",
         side_effect=ValueError("whatever"),
     )
     def test_asgi_issue_1883(
@@ -815,7 +812,7 @@ class TestAsgiApplicationRaisingError(AsgiTestBase):
         Test that exception UnboundLocalError local variable 'start' referenced before assignment is not raised
         See https://github.com/open-telemetry/opentelemetry-python-contrib/issues/1883
         """
-        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi, **self.constructor_params)
+        app = otel_asgi.OpenTelemetryMiddleware(simple_asgi)
         self.seed_app(app)
         self.send_default_request()
         try:

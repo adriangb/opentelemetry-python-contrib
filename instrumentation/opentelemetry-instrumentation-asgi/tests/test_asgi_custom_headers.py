@@ -73,16 +73,14 @@ async def websocket_app_with_custom_headers(scope, receive, send):
             break
 
 
-@mock.patch.dict(
-    "os.environ",
-    {
-        OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS: ".*my-secret.*",
-        OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_REQUEST: "Custom-Test-Header-1,Custom-Test-Header-2,Custom-Test-Header-3,Regex-Test-Header-.*,Regex-Invalid-Test-Header-.*,.*my-secret.*",
-        OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE: "Custom-Test-Header-1,Custom-Test-Header-2,Custom-Test-Header-3,my-custom-regex-header-.*,invalid-regex-header-.*,.*my-secret.*",
-    },
-)
-
 class TestCustomHeaders(AsgiTestBase, TestBase):
+    constructor_params = {}
+    __test__ = False
+
+    def __init_subclass__(cls) -> None:
+        if cls is not TestCustomHeaders:
+            cls.__test__ = True
+
     def setUp(self):
         super().setUp()
         self.tracer_provider, self.exporter = TestBase.create_tracer_provider()
@@ -90,7 +88,6 @@ class TestCustomHeaders(AsgiTestBase, TestBase):
         self.app = otel_asgi.OpenTelemetryMiddleware(
             simple_asgi, tracer_provider=self.tracer_provider, **self.constructor_params,
         )
-        self.constructor_params = {}
 
     def test_http_custom_request_headers_in_span_attributes(self):
         self.scope["headers"].extend(
@@ -347,7 +344,6 @@ SERVER_RESPONSE_TEST_VALUE = "Custom-Test-Header-1,Custom-Test-Header-2,Custom-T
 
 class TestCustomHeadersEnv(TestCustomHeaders):
     def setUp(self):
-        super().setUp()
         os.environ.update(
             {
                 OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS: SANITIZE_FIELDS_TEST_VALUE,
@@ -355,6 +351,7 @@ class TestCustomHeadersEnv(TestCustomHeaders):
                 OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SERVER_RESPONSE: SERVER_RESPONSE_TEST_VALUE,
             }
         )
+        super().setUp()
     
     def tearDown(self):
         os.environ.pop(OTEL_INSTRUMENTATION_HTTP_CAPTURE_HEADERS_SANITIZE_FIELDS, None)
@@ -364,10 +361,8 @@ class TestCustomHeadersEnv(TestCustomHeaders):
 
 
 class TestCustomHeadersConstructor(TestCustomHeaders):
-    def setUp(self):
-        super().setUp()
-        self.constructor_params = {
-            "http_capture_headers_sanitize_fields": SANITIZE_FIELDS_TEST_VALUE,
-            "http_capture_headers_server_request": SERVER_REQUEST_TEST_VALUE,
-            "http_capture_headers_server_response": SERVER_RESPONSE_TEST_VALUE,
-        }
+    constructor_params = {
+        "http_capture_headers_sanitize_fields": SANITIZE_FIELDS_TEST_VALUE.split(","),
+        "http_capture_headers_server_request": SERVER_REQUEST_TEST_VALUE.split(","),
+        "http_capture_headers_server_response": SERVER_RESPONSE_TEST_VALUE.split(","),
+    }

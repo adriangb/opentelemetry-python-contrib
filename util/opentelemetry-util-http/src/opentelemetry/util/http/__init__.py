@@ -74,7 +74,11 @@ class SanitizeValue:
     def __init__(self, sanitized_fields: Iterable[str]):
         self._sanitized_fields = sanitized_fields
         if self._sanitized_fields:
-            self._regex = re_compile("|".join(sanitized_fields), RE_IGNORECASE)
+            try:
+                self._regex = re_compile("|".join(sanitized_fields), RE_IGNORECASE)
+            except Exception as e:
+                breakpoint()
+                raise e
 
     def sanitize_header_value(self, header: str, value: str) -> str:
         return (
