@@ -320,6 +320,8 @@ class _DjangoMiddleware(MiddlewareMixin):
     # pylint: disable=too-many-branches
     # pylint: disable=too-many-locals
     def process_response(self, request, response):
+        breakpoint()
+        raise Exception('abc')
         if self._excluded_urls.url_disabled(request.build_absolute_uri("?")):
             return response
 
