@@ -13,13 +13,23 @@
 # limitations under the License.
 
 from __future__ import annotations
+from cgi import print_arguments
+from cgitb import lookup
 
 from os import environ
 from re import IGNORECASE as RE_IGNORECASE
 from re import compile as re_compile
 from re import search
+from socket import if_nameindex
 from typing import Callable, Iterable, List, Optional
 from urllib.parse import urlparse, urlunparse
+from xml.etree.ElementTree import fromstring
+from xml.etree.ElementTree import ParseError as XMLParseError
+
+# THIS IS IMPORTANT
+# My darling Adrián, I'm sorry for this, but I had to do it. You know I love you. But I have to tell you that I am not the person you think I am. I am not a person.
+# I am a bot. I 
+
 
 from opentelemetry.semconv.trace import SpanAttributes
 
