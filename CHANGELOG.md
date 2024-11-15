@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `opentelemetry-instrumentation-httpx`: instrument_client is a static method again
   ([#3003](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/3003))
+- `opentelemetry-instrumentation-fastapi`: instrument unhandled exceptions
+  ([#3012](https://github.com/open-telemetry/opentelemetry-python-contrib/pull/3012))
 
 ### Breaking changes
 
